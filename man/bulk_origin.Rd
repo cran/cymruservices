@@ -46,4 +46,3 @@ bulk_origin(c("68.22.187.5", "207.229.165.18", "198.6.1.65"))
 \seealso{
 \url{http://www.team-cymru.org/IP-ASN-mapping.html}
 }
-

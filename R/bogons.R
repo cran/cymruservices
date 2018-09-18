@@ -1,4 +1,120 @@
-safe_rl <- safely(readLines)
+# documented, memoised versions of these are at the bottom
+
+.ipv4_bogons <- function(force=FALSE, cached_bogons=NA) {
+
+  BOGONS_URL <- "https://www.team-cymru.org/Services/Bogons/fullbogons-ipv4.txt"
+
+  if (Sys.getenv("CYMRU_LAST_V4_BOGON") == "") {
+
+    bogons <- safe_rl(BOGONS_URL)
+
+    if (is.null(bogons$result)) {
+      message("Could not reach team-cymru.org")
+      return(NA_character_)
+    }
+
+    bogons <- bogons$result
+
+    as.numeric(
+      stri_match_all_regex(bogons[1], "updated ([[:digit:]]+) ")[[1]][,2]
+    ) -> last_updated
+
+    Sys.setenv(CYMRU_LAST_V4_BOGON=last_updated)
+
+    return(tail(bogons, -1))
+
+  } else {
+
+    delta <- (as.numeric(Sys.time()) - as.numeric(Sys.getenv("CYMRU_LAST_V4_BOGON")))
+
+    if ((delta > 14400) | ((delta < 14400) & force)) {
+
+      bogons <- safe_rl(BOGONS_URL)
+
+      if (is.null(bogons$result)) {
+        message("Could not reach team-cymru.org")
+        return(NA_character_)
+      }
+
+      bogons <- bogons$result
+
+      as.numeric(
+        stri_match_all_regex(bogons[1], "updated ([[:digit:]]+) ")[[1]][,2]
+      ) -> last_updated
+
+      Sys.setenv(CYMRU_LAST_V4_BOGON=last_updated)
+
+      return(tail(bogons, -1))
+
+    } else {
+
+      message("It has not been 4 hours since the last refresh. Use 'force=TRUE' to force a refresh.")
+
+      return(cached_bogons)
+
+    }
+
+  }
+
+}
+
+.ipv6_bogons <- function(force=FALSE, cached_bogons=NA) {
+
+  FULL_BOGONS_URL <- "https://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt"
+
+  if (Sys.getenv("CYMRU_LAST_V6_BOGON") == "") {
+
+    bogons <- safe_rl(FULL_BOGONS_URL)
+
+    if (is.null(bogons$result)) {
+      message("Could not reach team-cymru.org")
+      return(NA_character_)
+    }
+
+    bogons <- bogons$result
+
+    as.numeric(
+      stri_match_all_regex(bogons[1], "updated ([[:digit:]]+) ")[[1]][,2]
+    ) -> last_updated
+
+    Sys.setenv(CYMRU_LAST_V6_BOGON=last_updated)
+
+    return(tail(bogons, -1))
+
+  } else {
+
+    delta <- (as.numeric(Sys.time()) - as.numeric(Sys.getenv("CYMRU_LAST_V6_BOGON")))
+
+    if ((delta > 14400) | ((delta < 14400) & force)) {
+
+      bogons <- safe_rl(FULL_BOGONS_URL)
+
+      if (is.null(bogons$result)) {
+        message("Could not reach team-cymru.org")
+        return(NA_character_)
+      }
+
+      bogons <- bogons$result
+
+      as.numeric(
+        stri_match_all_regex(bogons[1],
+        "updated ([[:digit:]]+) ")[[1]][,2]
+      ) -> last_updated
+
+      Sys.setenv(CYMRU_LAST_V6_BOGON=last_updated)
+
+      return(tail(bogons, -1))
+
+    } else {
+
+      message("It has not been 4 hours since the last refresh. Use 'force=TRUE' to force a refresh.")
+
+      return(cached_bogons)
+
+    }
+
+  }
+}
 
 #' Retrieve list of IPv4 "full bogons" from Team Cymru webservice
 #'
@@ -26,61 +142,7 @@ safe_rl <- safely(readLines)
 #' v4_bogons <- ipv4_bogons()
 #' v4_bogons <- ipv4_bogons(cached_bogons=v4_bogons)
 #' }
-ipv4_bogons <- function(force=FALSE, cached_bogons=NA) {
-
-  BOGONS_URL <- "http://www.team-cymru.org/Services/Bogons/fullbogons-ipv4.txt"
-
-  if (Sys.getenv("CYMRU_LAST_V4_BOGON") == "") {
-
-    bogons <- safe_rl(BOGONS_URL)
-
-    if (is.null(bogons$result)) {
-      message("Could not reach team-cymru.org")
-      return(NA_character_)
-    }
-
-    bogons <- bogons$result
-
-    last_updated <- as.numeric(str_match_all(bogons[1],
-                                             "updated ([[:digit:]]+) ")[[1]][,2])
-
-    Sys.setenv(CYMRU_LAST_V4_BOGON=last_updated)
-
-    return(tail(bogons, -1))
-
-  } else {
-
-    delta <- (as.numeric(Sys.time()) - as.numeric(Sys.getenv("CYMRU_LAST_V4_BOGON")))
-
-    if ((delta > 14400) | ((delta < 14400) & force)) {
-
-      bogons <- safe_rl(BOGONS_URL)
-
-      if (is.null(bogons$result)) {
-        message("Could not reach team-cymru.org")
-        return(NA_character_)
-      }
-
-      bogons <- bogons$result
-
-      last_updated <- as.numeric(str_match_all(bogons[1],
-                                               "updated ([[:digit:]]+) ")[[1]][,2])
-
-      Sys.setenv(CYMRU_LAST_V4_BOGON=last_updated)
-
-      return(tail(bogons, -1))
-
-    } else {
-
-      message("It has not been 4 hours since the last refresh. Use 'force=TRUE' to force a refresh.")
-
-      return(cached_bogons)
-
-    }
-
-  }
-
-}
+ipv4_bogons <- memoise::memoise(.ipv4_bogons)
 
 #' Retrieve list of IPv6 "full bogons" from Team Cymru webservice
 #'
@@ -108,57 +170,4 @@ ipv4_bogons <- function(force=FALSE, cached_bogons=NA) {
 #' v6_bogons <- ipv6_bogons()
 #' v6_bogons <- ipv6_bogons(cached_bogons=v6_bogons)
 #' }
-ipv6_bogons <- function(force=FALSE, cached_bogons=NA) {
-
-  FULL_BOGONS_URL <- "http://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt"
-
-  if (Sys.getenv("CYMRU_LAST_V6_BOGON") == "") {
-
-    bogons <- safe_rl(FULL_BOGONS_URL)
-
-    if (is.null(bogons$result)) {
-      message("Could not reach team-cymru.org")
-      return(NA_character_)
-    }
-
-    bogons <- bogons$result
-
-    last_updated <- as.numeric(str_match_all(bogons[1],
-                                             "updated ([[:digit:]]+) ")[[1]][,2])
-
-    Sys.setenv(CYMRU_LAST_V6_BOGON=last_updated)
-
-    return(tail(bogons, -1))
-
-  } else {
-
-    delta <- (as.numeric(Sys.time()) - as.numeric(Sys.getenv("CYMRU_LAST_V6_BOGON")))
-
-    if ((delta > 14400) | ((delta < 14400) & force)) {
-
-      bogons <- safe_rl(FULL_BOGONS_URL)
-
-      if (is.null(bogons$result)) {
-        message("Could not reach team-cymru.org")
-        return(NA_character_)
-      }
-
-      bogons <- bogons$result
-
-      last_updated <- as.numeric(str_match_all(bogons[1],
-                                               "updated ([[:digit:]]+) ")[[1]][,2])
-
-      Sys.setenv(CYMRU_LAST_V6_BOGON=last_updated)
-
-      return(tail(bogons, -1))
-
-    } else {
-
-      message("It has not been 4 hours since the last refresh. Use 'force=TRUE' to force a refresh.")
-
-      return(cached_bogons)
-
-    }
-
-  }
-}
+ipv6_bogons <- memoise::memoise(.ipv6_bogons)

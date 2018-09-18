@@ -38,4 +38,3 @@ v4_bogons <- ipv4_bogons(cached_bogons=v4_bogons)
 \seealso{
 \url{http://www.team-cymru.org/bogon-reference-http.html}
 }
-

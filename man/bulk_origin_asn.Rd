@@ -45,4 +45,3 @@ bulk_origin_asn(c(22822, 1273, 2381, 2603, 2914, 3257, 3356, 11164,
 \seealso{
 \url{http://www.team-cymru.org/IP-ASN-mapping.html}
 }
-
